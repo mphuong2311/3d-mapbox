@@ -1,7 +1,6 @@
 <template>
   <div class="map-container">
     <MglMap
-      class="map"
       :map-style="mapStyle"
       :center="center"
       :zoom="zoom"
@@ -28,16 +27,15 @@ export default {
       bearing: 0,
       pitch: 60,
       map: null,
-      customLayer: null
+      customLayer: null,
     };
   },
   methods: {
     onMapLoad({ map }) {
       this.map = map;
-      map.addLayer(customLayer, 'waterway-label')
+      map.addLayer(customLayer, "waterway-label");
     },
   },
-
 };
 </script>
 
