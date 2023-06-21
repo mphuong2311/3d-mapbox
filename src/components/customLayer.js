@@ -1,8 +1,12 @@
 // parameters to ensure the model is georeferenced correctly on the map
 import mapboxgl from "mapbox-gl";
+import * as THREE from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
+
+
 const modelOrigin = [105.74764, 20.9617];
 const modelAltitude = 0;
-const modelRotate = [Math.PI / 2, 0, 0];
+const modelRotate = [Math.PI / 2, 1, 0];
 
 const modelAsMercatorCoordinate = mapboxgl.MercatorCoordinate.fromLngLat(
   modelOrigin,
@@ -10,6 +14,7 @@ const modelAsMercatorCoordinate = mapboxgl.MercatorCoordinate.fromLngLat(
 );
 
 // transformation parameters to position, rotate and scale the 3D model onto the map
+// eslint-disable-next-line no-unused-vars
 const modelTransform = {
   translateX: modelAsMercatorCoordinate.x,
   translateY: modelAsMercatorCoordinate.y,
@@ -23,7 +28,7 @@ const modelTransform = {
   scale: modelAsMercatorCoordinate.meterInMercatorCoordinateUnits(),
 };
 
-const THREE = window.THREE;
+// const THREE = window.THREE;
 
 // configuration of the custom layer for a 3D model per the CustomLayerInterface
 const customLayer = {
@@ -44,7 +49,7 @@ const customLayer = {
     this.scene.add(directionalLight2);
 
     // use the three.js GLTF loader to add the 3D model to the three.js scene
-    const loader = new THREE.GLTFLoader();
+    const loader = new GLTFLoader();
     loader.load(
       "https://docs.mapbox.com/mapbox-gl-js/assets/34M_17/34M_17.gltf",
       (gltf) => {

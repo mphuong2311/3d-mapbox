@@ -7,6 +7,7 @@
       :zoom="zoom"
       :attribution-control="false"
       @load="onMapLoad"
+      :pitch="pitch"
     >
     </MglMap>
   </div>
@@ -15,6 +16,7 @@
 <script>
 import { MAPBOX_STYLE } from "@/config/mapbox";
 import customLayer from "./customLayer";
+
 export default {
   name: "HelloWorld",
   components: {},
@@ -25,17 +27,17 @@ export default {
       zoom: 18,
       bearing: 0,
       pitch: 60,
+      map: null,
+      customLayer: null
     };
   },
   methods: {
     onMapLoad({ map }) {
       this.map = map;
-      console.log(this.map);
-      map.on("style.load", () => {
-        map.addLayer(customLayer, "waterway-label");
-      });
+      map.addLayer(customLayer, 'waterway-label')
     },
   },
+
 };
 </script>
 
