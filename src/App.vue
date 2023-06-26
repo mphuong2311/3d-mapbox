@@ -1,19 +1,19 @@
 <template>
   <div id="app">
-    <h3>Mapbox and 3D Model</h3>
+    <h3>Three JS</h3>
     <HelloWorld />
   </div>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
+import HelloWorld from "./components/HelloWorld.vue";
 
 export default {
-  name: 'App',
+  name: "App",
   components: {
-    HelloWorld
-  }
-}
+    HelloWorld,
+  },
+};
 </script>
 
 <style>
