@@ -36,8 +36,8 @@ export default {
         this.xbus = gltf.scene;
 
         // Đặt vị trí và kích thước của mô hình
-        this.xbus.position.set(5, 0, 35); // Đặt mô hình ở trên mặt đường
-        this.xbus.scale.set(5, 5, 5); // Đặt tỷ lệ kích thước của mô hình
+        this.xbus.position.set(5, 0, 50); // Đặt mô hình ở trên mặt đường
+        this.xbus.scale.set(3.5, 3.5, 3.5); // Đặt tỷ lệ kích thước của mô hình
 
         // Tạo vật liệu MeshPhongMaterial cho mô hình
         var xbusMaterial = new THREE.MeshPhongMaterial({
@@ -140,12 +140,36 @@ export default {
     },
     animate() {
       this.stats.begin();
+
       // Cập nhật vị trí z của ô tô
       this.object.position.z += 0.5;
       this.person.position.z += 0.2;
-      this.lineLeft.position.z += 0.2;
-      this.lineRight.position.z += 0.2;
-      this.lineCenter.position.z += 0.2;
+      this.lineLeft.position.z += 0.5;
+      this.lineRight.position.z += 0.5;
+      this.lineCenter.position.z += 0.5;
+
+      // Kiểm tra vị trí z của lineLeft
+      if (this.lineLeft.position.z > 100) {
+        this.lineLeft.position.z = -100;
+      }
+
+      // Kiểm tra vị trí z của lineRight
+      if (this.lineRight.position.z > 100) {
+        this.lineRight.position.z = -100;
+      }
+
+      // Kiểm tra vị trí z của lineCenter
+      if (this.lineCenter.position.z > 100) {
+        this.lineCenter.position.z = -100;
+      }
+
+      // Kiểm tra vị trí z của person
+      if (this.person.position.z > 75) {
+        // Nếu vị trí z vượt quá giới hạn, reset vị trí
+        this.person.position.z = -35; // Vị trí ban đầu của person
+        this.object.position.z = -35; // Vị trí ban đầu của object
+      }
+
       // Vẽ lại scene
       this.renderer.render(this.scene, this.camera);
       this.stats.end();
