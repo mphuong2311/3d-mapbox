@@ -7,6 +7,7 @@ import * as THREE from "three";
 import * as Stats from "stats.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import Xbus from "@/assets/xbus/Xbus2.gltf";
+import objList from "./object";
 export default {
   name: "RoadComponent",
   data() {
@@ -17,7 +18,7 @@ export default {
       xbus: null,
       road: null,
       object: null,
-      person: null,
+      objects: [],
       lineLeft: null,
       lineRight: null,
       lineCenter: null,
@@ -25,7 +26,7 @@ export default {
   },
   mounted() {
     this.load3DModel();
-    this.initThree();
+    this.initThree(objList);
   },
 
   methods: {
@@ -55,7 +56,7 @@ export default {
         this.scene.add(this.xbus);
       });
     },
-    initThree() {
+    initThree(objList) {
       this.stats = new Stats();
       this.stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
       this.$refs.mount.appendChild(this.stats.dom);
@@ -89,18 +90,42 @@ export default {
       // this.xbus = new THREE.Mesh(xbusGeometry, xbusMaterial);
       // // Đặt vị trí của ô tô
       // this.xbus.position.set(0, 0, 0); // Đặt ô tô ở trên mặt đường
+      //tạo obj dựa vào objList
+      objList.forEach((obj) => {
+        const key = Object.keys(obj)[0];
+        const position = obj[key].position;
+        const dimensions = obj[key].dimensions;
+        const speed = obj[key].speed; // Lấy giá trị speed từ objList
 
-      // Tạo object
-      var objectGeometry = new THREE.BoxGeometry(6, 12, 12); // Chiều dài, chiều rộng, chiều cao
-      var objectMaterial = new THREE.MeshBasicMaterial({ color: "green" });
-      this.object = new THREE.Mesh(objectGeometry, objectMaterial);
-      this.object.position.set(16, 0, -35); // Đặt ô tô ở trên mặt đường
+        var objectGeometry = new THREE.BoxGeometry(
+          dimensions.x,
+          dimensions.y,
+          dimensions.z
+        );
+        var objectMaterial = new THREE.MeshBasicMaterial({ color: "green" });
+        var object = new THREE.Mesh(objectGeometry, objectMaterial);
+        object.position.set(position.x, position.y, position.z);
 
-      // Tạo person
-      var personGeometry = new THREE.BoxGeometry(2, 5, 5); // Chiều dài, chiều rộng, chiều cao
-      var personMaterial = new THREE.MeshBasicMaterial({ color: "green" });
-      this.person = new THREE.Mesh(personGeometry, personMaterial);
-      this.person.position.set(-10, 0, -35); // Đặt ô tô ở trên mặt đường
+        this.scene.add(object);
+
+        // Lưu trữ đối tượng và speed trong objects
+        this.objects[key] = {
+          object: object,
+          speed: speed,
+        };
+      });
+      // // Tạo object
+      // var objectGeometry = new THREE.BoxGeometry(6, 12, 12); // Chiều dài, chiều rộng, chiều cao
+      // var objectMaterial = new THREE.MeshBasicMaterial({ color: "green" });
+      // this.object = new THREE.Mesh(objectGeometry, objectMaterial);
+      // this.object.position.set(16, 0, -35); // Đặt ô tô ở trên mặt đường
+
+      // // Tạo person
+      // var personGeometry = new THREE.BoxGeometry(2, 5, 5); // Chiều dài, chiều rộng, chiều cao
+      // var personMaterial = new THREE.MeshBasicMaterial({ color: "green" });
+      // this.person = new THREE.Mesh(personGeometry, personMaterial);
+      // this.person.position.set(-10, 0, -35); // Đặt ô tô ở trên mặt đường
+      // this.scene.add(this.object);
 
       var geometryLeft = new THREE.BufferGeometry().setFromPoints(pointsLeft);
       var geometryRight = new THREE.BufferGeometry().setFromPoints(pointsRight);
@@ -131,8 +156,6 @@ export default {
       this.scene.add(this.lineCenter);
       // Thêm ô tô vào scene
       this.scene.add(this.xbus);
-      this.scene.add(this.object);
-      this.scene.add(this.person);
 
       // Vẽ scene
       this.renderer.render(this.scene, this.camera);
@@ -140,10 +163,14 @@ export default {
     },
     animate() {
       this.stats.begin();
+      Object.keys(this.objects).forEach((key) => {
+        const object = this.objects[key];
+
+        // Cập nhật vị trí z của từng đối tượng
+        object.object.position.z += object.speed;
+      });
 
       // Cập nhật vị trí z của ô tô
-      this.object.position.z += 0.5;
-      this.person.position.z += 0.2;
       this.lineLeft.position.z += 0.5;
       this.lineRight.position.z += 0.5;
       this.lineCenter.position.z += 0.5;
@@ -161,13 +188,6 @@ export default {
       // Kiểm tra vị trí z của lineCenter
       if (this.lineCenter.position.z > 100) {
         this.lineCenter.position.z = -100;
-      }
-
-      // Kiểm tra vị trí z của person
-      if (this.person.position.z > 75) {
-        // Nếu vị trí z vượt quá giới hạn, reset vị trí
-        this.person.position.z = -35; // Vị trí ban đầu của person
-        this.object.position.z = -35; // Vị trí ban đầu của object
       }
 
       // Vẽ lại scene
