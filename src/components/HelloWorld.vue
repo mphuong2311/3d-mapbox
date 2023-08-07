@@ -7,7 +7,8 @@ import * as THREE from "three";
 import ROSLIB from "roslib";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import Xbus from "@/assets/xbus/Xbus2.gltf";
-
+import { LineDashedMaterial } from "three";
+import { AmbientLight, DirectionalLight } from "three";
 export default {
   name: "RoadComponent",
   data() {
@@ -16,8 +17,12 @@ export default {
       camera: null,
       renderer: null,
       objects: [],
+      rightLine: [],
+      leftLine: [],
+      centerLine: [],
       messageFromROS: null,
       road: null,
+      carMessageFromROS: null,
     };
   },
   mounted() {
@@ -37,18 +42,6 @@ export default {
         this.xbus.position.set(0, 0, 0); // Đặt mô hình ở trên mặt đường
         this.xbus.scale.set(1, 1, 1); // Đặt tỷ lệ kích thước của mô hình
 
-        // Tạo vật liệu MeshPhongMaterial cho mô hình
-        var xbusMaterial = new THREE.MeshPhongMaterial({
-          color: "gray",
-          shininess: 100,
-        });
-
-        // Gán vật liệu vào mô hình
-        this.xbus.traverse((child) => {
-          if (child instanceof THREE.Mesh) {
-            child.material = xbusMaterial;
-          }
-        });
         // Thêm mô hình vào scene
         this.scene.add(this.xbus);
       });
@@ -65,44 +58,13 @@ export default {
       // Đặt vị trí camera
       this.camera.position.set(0, 20, 20); // Đặt camera ở trên cao nhìn xuống
       this.camera.lookAt(0, 0, 0); // Hướng nhìn của camera vào tâm của scene
-      // Tạo đường
-      var roadWidth = 2; // Chiều rộng của mỗi làn đường
-      var pointsLeft = [];
-      var pointsRight = [];
-      var pointsCenter = [];
-      for (var i = 0; i < 100; i++) {
-        pointsLeft.push(new THREE.Vector3(-roadWidth, 0, i * 10 - 500));
-        pointsRight.push(new THREE.Vector3(roadWidth, 0, i * 10 - 500));
-        pointsCenter.push(new THREE.Vector3(0, 0, i * 10 - 505));
-        pointsCenter.push(new THREE.Vector3(0, 0, i * 10 - 495));
-      }
-      var geometryLeft = new THREE.BufferGeometry().setFromPoints(pointsLeft);
-      var geometryRight = new THREE.BufferGeometry().setFromPoints(pointsRight);
-      var geometryCenter = new THREE.BufferGeometry().setFromPoints(
-        pointsCenter
-      );
-      var material = new THREE.LineBasicMaterial({ color: "gray" });
-      var dashedMaterial = new THREE.LineDashedMaterial({
-        color: "white",
-        dashSize: 2,
-        gapSize: 1,
-      });
-      this.lineLeft = new THREE.Line(geometryLeft, material);
-      this.lineRight = new THREE.Line(geometryRight, material);
-      this.lineCenter = new THREE.LineSegments(geometryCenter, dashedMaterial);
-      this.lineCenter.computeLineDistances();
-      // Thêm đường vào scene
-      this.scene.add(this.lineLeft);
-      this.scene.add(this.lineRight);
-      this.scene.add(this.lineCenter);
-      // Thêm ánh sáng ambient
-      var ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+
+      const ambientLight = new AmbientLight(0xeeeeee, 0.5);
       this.scene.add(ambientLight);
 
-      // Thêm ánh sáng điểm (point light)
-      var pointLight = new THREE.PointLight(0xffffff, 1);
-      pointLight.position.set(0, 50, 50);
-      this.scene.add(pointLight);
+      const directionalLight = new DirectionalLight(0xffffff, 1);
+      directionalLight.position.set(100, 100, 100);
+      this.scene.add(directionalLight);
 
       // Vẽ scene
       this.renderer.render(this.scene, this.camera);
@@ -113,55 +75,87 @@ export default {
       this.objects.forEach((object) => {
         this.scene.remove(object);
       });
+
       // Vẽ vật thể
       this.objects = [];
       msg.objects.forEach((obj) => {
         const position = obj.position.pose;
         const dimensions = obj.shape.dimensions;
-        var geometry = new THREE.BoxGeometry(
+        const geometry = new THREE.BoxGeometry(
           -dimensions.y,
           dimensions.z,
           -dimensions.x
         );
-        var material = new THREE.MeshBasicMaterial({ color: "green" });
-        var box = new THREE.Mesh(geometry, material);
+        const material = new THREE.MeshBasicMaterial({ color: "green" });
+        const box = new THREE.Mesh(geometry, material);
+        const boxObj = new THREE.Object3D();
+        boxObj.add(box);
+        this.scene.add(boxObj);
         box.position.set(-position.y, position.z, -position.x);
-        box.rotation.set(0, obj.position.angle.roll, 0);
-        this.scene.add(box);
-        this.objects.push(box);
+        box.rotation.set(0, obj.position.angle.yaw, 0);
+        boxObj.rotateY(this.messageFromROS.angle.yaw);
+
+        this.objects.push(boxObj);
       });
-      // if (this.road) {
-      //   this.scene.remove(this.road);
-      //   this.road = null;
-      // }
 
-      // const pointsList = msg.map;
-      // const points = [];
+      //vẽ đường
+      if (msg.map.length > 0) {
+        // Remove existing objects from the scene
+        this.rightLine.forEach((object) => {
+          this.scene.remove(object);
+        });
+        // Vẽ vật thể
+        this.rightLine = [];
+        this.leftLine.forEach((object) => {
+          this.scene.remove(object);
+        });
+        // Vẽ vật thể
+        this.leftLine = [];
+        this.centerLine.forEach((object) => {
+          this.scene.remove(object);
+        });
+        // Vẽ vật thể
+        this.centerLine = [];
+        msg.map.forEach((line) => {
+          const rightPoints = line.right.map(
+            (point) => new THREE.Vector3(-point.y, point.z, -point.x)
+          );
+          const leftPoints = line.left.map(
+            (point) => new THREE.Vector3(-point.y, point.z, -point.x)
+          );
+          const centerPoints = line.center.map(
+            (point) => new THREE.Vector3(-point.y, point.z, -point.x)
+          );
+          const rightGeometry = new THREE.BufferGeometry().setFromPoints(
+            rightPoints
+          );
+          const leftGeometry = new THREE.BufferGeometry().setFromPoints(
+            leftPoints
+          );
+          const centerGeometry = new THREE.BufferGeometry().setFromPoints(
+            centerPoints
+          );
+          const centerMaterial = new LineDashedMaterial({
+            color: 0x00ff00,
+            dashSize: 1,
+            gapSize: 1.5,
+          }); // Sử dụng LineDashedMaterial và cấu hình dashSize và gapSize theo ý muốn
+          centerMaterial.transparent = true; // Đặt thuộc tính transparent là true để có thể hiển thị đường nét đứt
 
-      // pointsList.forEach((point, index) => {
-      //   // Kiểm tra điều kiện để chỉ nối các điểm ở giữa
-      //   if (index > 0 && index < pointsList.length - 1) {
-      //     const vector = new THREE.Vector3(-point.y, point.z, -point.x);
+          const material = new THREE.LineBasicMaterial({ color: 0x00ff00 });
 
-      //     // Tạo ma trận quay 45 độ theo trục Z
-      //     const angle = Math.PI / -3; // Góc quay 45 độ (được chuyển từ radian sang độ bằng cách chia cho 180 và nhân cho Math.PI)
-      //     const rotationMatrix = new THREE.Matrix4().makeRotationY(angle);
-
-      //     // Áp dụng ma trận quay vào vector
-      //     vector.applyMatrix4(rotationMatrix);
-
-      //     points.push(vector);
-      //   }
-      // });
-
-      // const geometryPoint = new THREE.BufferGeometry().setFromPoints(points);
-
-      // const material = new THREE.LineBasicMaterial({ color: "gray" });
-
-      // // Tạo đối tượng Line (hoặc LineSegments) với các điểm chỉ nối ở giữa
-      // this.road = new THREE.Line(geometryPoint, material);
-
-      // this.scene.add(this.road);
+          const rightLine = new THREE.Line(rightGeometry, material);
+          const leftLine = new THREE.Line(leftGeometry, material);
+          const centerLine = new THREE.Line(centerGeometry, centerMaterial);
+          centerLine.computeLineDistances();
+          this.scene.add(rightLine);
+          this.scene.add(leftLine);
+          this.scene.add(centerLine);
+          this.rightLine.push(rightLine);
+          this.leftLine.push(leftLine);
+          this.centerLine.push(centerLine);
+        });
+      }
     },
 
     initROS() {
@@ -177,35 +171,42 @@ export default {
         ros: ros,
         name: "/show_visualization/visualization",
         messageType: "autoware_lanelet2_msgs/Visualization",
-        throttle_rate: 0,
+        throttle_rate: 200,
       });
 
       topic.subscribe((message) => {
         this.messageFromROS = JSON.parse(JSON.stringify(message));
         this.createObjectBox(this.messageFromROS);
+        // Cập nhật góc xoay của mô hình 3D
+        if (this.xbus) {
+          let euler = new THREE.Euler(
+            0,
+            this.messageFromROS.angle.yaw,
+            0,
+
+            "XYZ"
+          );
+          this.xbus.quaternion.setFromEuler(euler);
+        }
       });
     },
     animate() {
-      // Cập nhật vị trí z của ô tô
-      this.lineLeft.position.z += 0.1;
-      this.lineRight.position.z += 0.1;
-      this.lineCenter.position.z += 0.1;
-
-      // Kiểm tra vị trí z của lineLeft
-      if (this.lineLeft.position.z > 100) {
-        this.lineLeft.position.z = -100;
-      }
-
-      // Kiểm tra vị trí z của lineRight
-      if (this.lineRight.position.z > 100) {
-        this.lineRight.position.z = -100;
-      }
-
-      // Kiểm tra vị trí z của lineCenter
-      if (this.lineCenter.position.z > 100) {
-        this.lineCenter.position.z = -100;
-      }
       requestAnimationFrame(this.animate.bind(this));
+      if (this.xbus && this.messageFromROS) {
+        let cameraDistance = 10;
+        // Thay đổi vị trí camera để nhìn về hướng ngược lại
+        this.camera.position.x =
+          this.xbus.position.x +
+          cameraDistance * Math.sin(this.messageFromROS.angle.yaw);
+        this.camera.position.y = cameraDistance;
+        this.camera.position.z =
+          this.xbus.position.z +
+          cameraDistance * Math.cos(this.messageFromROS.angle.yaw);
+
+        // Hướng camera về mô hình xe
+        this.camera.lookAt(this.xbus.position);
+      }
+
       this.renderer.render(this.scene, this.camera);
     },
   },
